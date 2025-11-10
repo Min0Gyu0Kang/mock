@@ -5,7 +5,7 @@
     "scripts": {
         "frontend": "http-server ./ -p 3000 -c-1",
         "backend": "bash -lc \"source .venv/bin/activate && python -m uvicorn back:app --reload --host 127.0.0.1 --port 8000\"",
-        "dev": "concurrently --kill-others-on-fail \"npm:backend\" \"npm:frontend\"",
+        "dev": "concurrently \"npm:backend\" \"npm:frontend\"",
         "start": "npm run frontend"
     },
     "devDependencies": {
