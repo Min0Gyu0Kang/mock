@@ -3,9 +3,6 @@ from typing import Dict, Any
 import numpy as np
 import random
 import json
-# GeoPandas는 실제 지리공간 처리 시 필요. 여기서는 구조만 보여줍니다.
-# import geopandas as gpd
-
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="LRI Engine Backend Prototype")
