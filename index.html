@@ -23,6 +23,17 @@
         맵 클릭 시 LRI 계산 시작 (Lat: 37.5, Lon: 127.0 등 임의 좌표 전송)
     </div>
 
+    <div>
+      <label for="scenario">Scenario:</label>
+      <select id="scenario">
+        <option value="random">random</option>
+        <option value="very_good">very_good</option>
+        <option value="severe">severe</option>
+        <option value="warning">warning</option>
+        <option value="hard_stop">hard_stop</option>
+      </select>
+    </div>
+
     <div id="result-box">
         여기에 LRI 계산 결과가 표시됩니다.
     </div>
@@ -31,6 +42,7 @@
         document.getElementById('map-area').addEventListener('click', async function(event) {
             const mockLat = 37.5 + (Math.random() - 0.5) * 0.1;
             const mockLon = 127.0 + (Math.random() - 0.5) * 0.1;
+            const scenario = document.getElementById('scenario').value;
             
             const resultBox = document.getElementById('result-box');
             resultBox.innerHTML = `⏳ ${mockLat.toFixed(4)}, ${mockLon.toFixed(4)} 좌표 분석 중...`;
@@ -39,7 +51,7 @@
                 const response = await fetch('http://127.0.0.1:8000/api/calculate_lri', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ lat: mockLat, lon: mockLon })
+                    body: JSON.stringify({ lat: mockLat, lon: mockLon, scenario })
                 });
 
                 if (!response.ok) {
