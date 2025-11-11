@@ -1,8 +1,13 @@
+import signal
+import sys
 from fastapi import FastAPI, HTTPException
 from typing import Dict, Any
 import numpy as np
 import random
 import json
+# GeoPandas는 실제 지리공간 처리 시 필요. 여기서는 구조만 보여줍니다.
+# import geopandas as gpd
+
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="LRI Engine Backend Prototype")
@@ -19,7 +24,7 @@ app.add_middleware(
 # LRI 모델 상수 및 파라미터 (회전익 기준)
 W_V, W_N, W_S = 0.45, 0.35, 0.20  # 가중치 (w_V, w_N, w_S)
 AL_H, AL_V = 40, 50              # 항법 한계 (AL_H, AL_V) - APV-I 기준
-TAU_RED, TAU_YELLOW = 80, 60     # 임계값 (tau)
+TAU_RED, TAU_YELLOW = 60, 80     # 임계값 (tau) -- FIXED: red < yellow
 
 # ----------------------------------------------------------------------
 # 헬퍼 함수: LRI 수식 구현
@@ -57,8 +62,10 @@ def calculate_lri(data: Dict[str, Any]) -> Dict[str, Any]:
         delta_sigma_0 = data.get('delta_sigma_0', 0.0)
         core_percent = data.get('core_percent', 0)
         
+        # Require both horizontal and vertical protection limits to be exceeded
+        # to avoid single-parameter false positives triggering a hard stop.
         is_hard_stop = (CTBT < 235) or \
-                       (HPL > AL_H or VPL > AL_V) or \
+                       ((HPL > AL_H) and (VPL > AL_V)) or \
                        (delta_sigma_0 > 3.0 and core_percent >= 30)
 
         # 6. 등급 판단
@@ -82,15 +89,65 @@ def calculate_lri(data: Dict[str, Any]) -> Dict[str, Any]:
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/api/calculate_lri")
-async def calculate_lri_endpoint(coords: Dict[str, float]) -> Dict[str, Any]:
+def _generate_scenario(name: str) -> Dict[str, Any]:
     """
-    클라이언트로부터 좌표를 받아 LRI를 계산하고 결과를 반환합니다.
+    Return a mock data dict for a named scenario.
+    Supported names: "very_good", "severe", "warning", "hard_stop", "random"
     """
-    lat, lon = coords.get("lat"), coords.get("lon")
-    
-    # 모의 데이터 생성
-    mock_data = {
+    if name == "very_good":
+        return {
+            "actual_visibility": 60.0,
+            "required_visibility": 30.0,
+            "alpha_cloud": 0.0,
+            "HPL": AL_H,
+            "VPL": AL_V,
+            "alpha_terrain": 0.01,
+            "r_och_neg": 0.0,
+            "delta_sigma_0": 0.0,
+            "core_percent": 0,
+            "CTBT": 273
+        }
+    if name == "severe":
+        return {
+            "actual_visibility": 0.05,
+            "required_visibility": 30.0,
+            "alpha_cloud": 0.99,
+            "HPL": 59.6,
+            "VPL": 50.0,
+            "alpha_terrain": 0.9,
+            "r_och_neg": 0.1,
+            "delta_sigma_0": 2.0,
+            "core_percent": 10,
+            "CTBT": 273
+        }
+    if name == "warning":
+        return {
+            "actual_visibility": 1.0,
+            "required_visibility": 30.0,
+            "alpha_cloud": 0.892,
+            "HPL": 78.0,
+            "VPL": 50.0,
+            "alpha_terrain": 0.01,
+            "r_och_neg": 0.0,
+            "delta_sigma_0": 0.5,
+            "core_percent": 5,
+            "CTBT": 273
+        }
+    if name == "hard_stop":
+        return {
+            "actual_visibility": 50,
+            "required_visibility": 30,
+            "alpha_cloud": 0.05,
+            "HPL": AL_H + 20,
+            "VPL": AL_V,
+            "alpha_terrain": 0.05,
+            "r_och_neg": 0.0,
+            "delta_sigma_0": 4.0,
+            "core_percent": 40,
+            "CTBT": 230
+        }
+    # random/default
+    return {
         "actual_visibility": random.uniform(25, 60),
         "required_visibility": 30,
         "alpha_cloud": random.uniform(0.05, 0.4),
@@ -103,13 +160,38 @@ async def calculate_lri_endpoint(coords: Dict[str, float]) -> Dict[str, Any]:
         "core_percent": random.choice([5, 30, 40])
     }
 
+@app.post("/api/calculate_lri")
+async def calculate_lri_endpoint(payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Accepts JSON: { "lat": <float>, "lon": <float>, "scenario": "<name>" }
+    scenario is optional; defaults to "random".
+    """
+    lat = payload.get("lat")
+    lon = payload.get("lon")
+    scenario = (payload.get("scenario") or "random").lower()
+    # build mock_data from scenario
+    mock_data = _generate_scenario(scenario)
+
     result = calculate_lri(mock_data)
 
-    result['location'] = f"Lat: {lat:.4f}, Lon: {lon:.4f}"
+    result['location'] = f"Lat: {lat:.4f}, Lon: {lon:.4f}" if (lat is not None and lon is not None) else "unknown"
     result['Evidence'] = [
         f"가시성({result['V_score']}): 구름 감쇠계수({mock_data['alpha_cloud']:.2f})로 인해 {round(100*mock_data['actual_visibility']/mock_data['required_visibility'], 1)}% 충족에서 감점.",
         f"항법({result['N_score']}): HPL={mock_data['HPL']:.1f}m (AL_H={AL_H}m)으로 항법 무결성 {('유지' if result['N_score'] >= 90 else '저하')} 상태.",
         f"지형({result['S_score']}): 장애물 비율({mock_data['r_och_neg']*100:.1f}%) 반영. 표면 습윤/결빙 위험 Δσ⁰={mock_data['delta_sigma_0']:.1f}dB."
     ]
-    
+
     return result
+
+# Signal handler for graceful shutdown
+def signal_handler(sig, frame):
+    print("\nShutting down backend server gracefully...")
+    sys.exit(0)
+
+# Register signal handlers for SIGINT and SIGTERM
+signal.signal(signal.SIGINT, signal_handler)  # Handles Ctrl+C
+try:
+    signal.signal(signal.SIGTSTP, signal_handler)  # Handles Ctrl+Z (suspend)
+except AttributeError:
+    # SIGTSTP may not exist on Windows; fall back to SIGTERM
+    signal.signal(signal.SIGTERM, signal_handler)

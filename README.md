@@ -18,3 +18,24 @@ npm run backend
 
 # or run both frontend + backend
 npm run dev
+
+## BackEnd: scenario curl testing
+### change lat, lon, and scenario names for checking. Examples below
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/api/calculate_lri \
+    -H "Content-Type: application/json" \
+    -d '{"lat":37.5,"lon":127.0,"scenario":"severe"}'
+
+curl -s -X POST http://127.0.0.1:8000/api/calculate_lri \
+    -H "Content-Type: application/json" \
+    -d '{"lat":37.5,"lon":127.0,"scenario":"warning"}'
+
+curl -s -X POST http://127.0.0.1:8000/api/calculate_lri \
+    -H "Content-Type: application/json" \
+    -d '{"lat":37.5,"lon":127.0,"scenario":"hard_stop"}'
+
+curl -s -X POST http://127.0.0.1:8000/api/calculate_lri \
+    -H "Content-Type: application/json" \
+    -d '{"lat":37.5,"lon":127.0,"scenario":"very_good"}'
+```
