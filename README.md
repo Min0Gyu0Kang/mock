@@ -1,4 +1,4 @@
-# LRI 기반 모의 테스트(Mock Test)
+<img width="1003" height="710" alt="image" src="https://github.com/user-attachments/assets/cef0a540-6693-4020-8502-9f8bc87c3b42" /># LRI 기반 모의 테스트(Mock Test)
 ## 2025 스페이스 해커톤 Aerosafers팀 모의실험용 웹사이트
 
 초기 화면
@@ -137,3 +137,16 @@ curl -s -X POST http://127.0.0.1:8000/api/calculate_lri \
 ```bash
 npm run dev
 ```
+
+### 로컬 환경 사이트 연결 해제 send Termination of server connection
+after ctrl+c
+
+```bash
+[frontend] npm run frontend exited with code SIGINT
+[backend]
+[backend] Shutting down backend server gracefully...
+[backend] INFO:     Stopping reloader process [2956]
+[backend] npm run backend exited with code SIGINT
+```
+모두 vscode 콘솔에서 확인되면 완료! Website port terminated successfully
+
