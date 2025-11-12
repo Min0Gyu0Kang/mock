@@ -25,13 +25,13 @@ Scenario 옆의 드롭다운 막대를 선택하면 내부의 random, very_good,
 
 random: default와 동일, 데이터 값도 무작위로 전달받음.
 
-very_good: 항공기를 운항하기 최적인 경우. 초록으로 표시.
+very_good: 항공기 착륙 가능인 경우. 초록으로 표시.
 
-severe: 항공기 운항에 지장이 많이 생길 경우. 빨강으로 표시.
+severe: 항공기 착륙에 충돌이 많이 우려될 경우. 빨강으로 표시.
 
-warning: 항공기 운항 주의 단계인 경우. 노랑으로 표시.
+warning: 항공기 착륙에 난항이 예상되는 경우. 노랑으로 표시.
 
-hard_stop: 항공기 운항 중지 권고인 경우. 색이 페이드 인/아웃하는 빨강 계열로 표시.
+hard_stop: 항공기 착륙 불가인 경우. 색이 페이드 인/아웃하는 빨강 계열로 표시.
 
 ## 맵 영역 클릭 시 (지도 없는 상태로 테스트)
 
@@ -149,4 +149,5 @@ after ctrl+c
 [backend] npm run backend exited with code SIGINT
 ```
 모두 vscode 콘솔에서 확인되면 완료! Website port terminated successfully
+
 
